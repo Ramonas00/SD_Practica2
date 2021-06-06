@@ -54,7 +54,7 @@ def get_file(key, config):
 if __name__ == '__main__':
     with FunctionExecutor() as fexec:
         fut = fexec.call_async(get_file, (KEY, config))
-        fexec.plot()
+        #fexec.plot()
         dicRetorna = fut.result()
 
         #primer = False                             # En cas de que tots siguin de bara
@@ -64,15 +64,18 @@ if __name__ == '__main__':
         #    primer = True
         #    plt.bar(*zip(*dicRetorna[plot].items()))
 
-        plt.bar(*zip(*dicRetorna["graph1"].items())) 
+        plt.bar(*zip(*dicRetorna["graph1"].items()))
+        plt.ylabel('infectats', fontsize=16)
         plt.figure()
         plt.bar(*zip(*dicRetorna["graph2"].items()))
-        plt.xticks(rotation=35) 
+        plt.xticks(rotation=60) 
+        plt.ylabel('infectats', fontsize=16)
         plt.figure()
         plt.plot(*zip(*dicRetorna["graph3"].items()))
         plt.gcf().autofmt_xdate()
         plt.xticks(rotation=35)
-        loc = matplotlib.ticker.LinearLocator(numticks = 10)
+        plt.ylabel('infectats', fontsize=16)
+        loc = matplotlib.ticker.LinearLocator(numticks = 14)
         plt.gca().xaxis.set_major_locator(loc)
         
         plt.show()
