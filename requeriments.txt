@@ -1,1 +1,5 @@
-lithops==2.3.3
+lithops
+setuptools
+pandas
+matplotlib
+OrderedDict

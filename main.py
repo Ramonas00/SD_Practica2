@@ -5,77 +5,57 @@ import matplotlib.pyplot as plt
 import matplotlib.ticker
 from collections import OrderedDict
 
-BUCKET_NAME = 'sd-datasets'
-ENDPOINT = 'https://control.cloud-object-storage.cloud.ibm.com/v2/endpoints'
-NAMESPACE = 'evaldas.ramonas@estudiants.urv.cat_dev'
-API_KEY = "iJ5yV_3jL9wgDCoJCUB4cHdgsmr1kKIBjpOy7aXY5bBy"
-REGION = 'eu-de'
-ACCESS_KEY = '90b716817d974159a710ec8b0d510377'
-SECRET_KEY = 'ca6982a4e03fb75d7dba0401243c859196195c470bc5e815' 
+BUCKET = "sd-datasets"
 
-KEY = 'datasetCasos.csv'
+def get_file(key1, key2):
+    password = "csvCombinat.csv"
 
-config = {
-        'lithops' : {'storage_bucket' : BUCKET_NAME},
+    storage = Storage()
+    fitxer1 = storage.get_object(bucket=BUCKET, key=key1, stream=True)
+    fitxer2 = storage.get_object(bucket=BUCKET, key=key2, stream=True)
 
-        'ibm_cf' : {'endpoint': ENDPOINT,
-                    'namespace': NAMESPACE,
-                    'api_key': API_KEY},
+    primer = pd.read_csv(fitxer1, usecols = ['TipusCasData','ComarcaDescripcio','SexeDescripcio'])
+    primer.columns = ['Data','Comarca','Sexe']
+    segon = pd.read_csv(fitxer2, usecols = ['NOM','DATA','SEXE'])
+    segon = segon[['DATA','NOM','SEXE']]
+    segon.columns = ['Data','Comarca','Sexe']
+    combinat = primer.append(segon)
+    filecsv = combinat.to_csv()
 
-        'ibm_cos' : {'region': REGION,
-                     'access_key': ACCESS_KEY,
-                     'secret_key': SECRET_KEY}}
- 
+    storage.put_object(bucket=BUCKET, key=password, body=filecsv)
 
-def get_file(key, config):
+    return password
+
+
+def generate_plots(key):
     dicRetorna = {}         # Diccionari per retornar
     counts = {'':''}
 
-    storage = Storage(config=config)
-    configs = config["lithops"]
-    bucket = configs["storage_bucket"]
-    fitxer = storage.get_object(bucket=bucket, key=key, stream=True)
+    storage = Storage()
+    fitxer = storage.get_object(bucket=BUCKET, key=key, stream=True)
     
-    datos = pd.read_csv(fitxer)
-    df = pd.DataFrame(datos)
-    df['TipusCasData'] = pd.to_datetime(df['TipusCasData'], format= '%d/%m/%Y')     # Sort CSV per data
-    df = df.sort_values(by = 'TipusCasData')
+    df = pd.read_csv(fitxer)
+    print(df)
+    #df = pd.DataFrame(datos)
+    df['Data'] = pd.to_datetime(df['Data'], format= '%d/%m/%Y')     # Sort CSV per data
+    df = df.sort_values(by = 'Data')
 
-    counts=df['SexeDescripcio'].value_counts()      # GRAPH 1: Dones i homes infectats
+    counts=df['Sexe'].value_counts()      # GRAPH 1: Dones i homes infectats
     dicRetorna["graph1"] = counts
-    counts=df['ComarcaDescripcio'].value_counts()   # GRAPH 2: Infectats per comarca
+    counts=df['Comarca'].value_counts()   # GRAPH 2: Infectats per comarca
     dicRetorna["graph2"] = counts
-    counts=df['TipusCasData'].value_counts()
+    counts=df['Data'].value_counts()
     counts=OrderedDict(sorted(counts.items()))
     dicRetorna["graph3"] = counts                   # GRAPH 3: Infectats al llarg del temps
 
     return dicRetorna
 
 if __name__ == '__main__':
+    KEY1 = 'datasetCasos.csv'
+    KEY2 = 'datasetCasosComarca.csv'
+
     with FunctionExecutor() as fexec:
-        fut = fexec.call_async(get_file, (KEY, config))
-        #fexec.plot()
-        dicRetorna = fut.result()
-
-        #primer = False                             # En cas de que tots siguin de bara
-        #for plot in dicRetorna:
-        #    if primer:
-        #        plt.figure()
-        #    primer = True
-        #    plt.bar(*zip(*dicRetorna[plot].items()))
-
-        plt.bar(*zip(*dicRetorna["graph1"].items()))
-        plt.ylabel('infectats', fontsize=16)
-        plt.figure()
-        plt.bar(*zip(*dicRetorna["graph2"].items()))
-        plt.xticks(rotation=60) 
-        plt.ylabel('infectats', fontsize=16)
-        plt.figure()
-        plt.plot(*zip(*dicRetorna["graph3"].items()))
-        plt.gcf().autofmt_xdate()
-        plt.xticks(rotation=35)
-        plt.ylabel('infectats', fontsize=16)
-        loc = matplotlib.ticker.LinearLocator(numticks = 14)
-        plt.gca().xaxis.set_major_locator(loc)
-        
-        plt.show()
+        fut = fexec.call_async(get_file, (KEY1, KEY2))
+        KEY = fut.result()
+        fut2 = fexec.call_async(generate_plots, KEY)
+        dicRetorna = fut2.result()
